@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "MapaRutas",
+    "slug": "MapaRutas",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "maparutas",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.safeli.navigation", 
+      "config": {
+        "googleMapsApiKey": "AIzaSyCdskEeFYDGRFyPSdaJizI_Y_8jaDkW_O4"
+      }
+    },
+    "android": {
+      "package": "com.safeli.navigation",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCdskEeFYDGRFyPSdaJizI_Y_8jaDkW_O4"
+        }
+      }
+    }
+  }
+}
