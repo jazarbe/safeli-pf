@@ -1,11 +1,11 @@
+import { importarDelitos } from './backOffice.js';
+
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 require('dotenv').config();
 const express = require('express');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-
-const https = require('https');
 const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
@@ -17,10 +17,10 @@ const supabase = createClient(
 //   const { data, error } = await supabase.from('Usuarios').select('nombre, apellido');
 //   if (error) return res.status(400).json(error);
 //   res.json(data);
-// })
+// });
 
 app.get('/', (req, res) => {
-  res.send('<button>Subir</button>');
+  res.send('<input type="file" id="fileInput" required><button type="submit" onclick="importarDelitos()">Subir</button>');
 });
 
 app.listen(PORT, () => {
