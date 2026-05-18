@@ -1,26 +1,47 @@
-import { importarDelitos } from './backOffice.js';
-
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 require('dotenv').config();
 const express = require('express');
+const multer = require('multer');
+const { importarDelitos } = require('./backoffice.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const { createClient } = require('@supabase/supabase-js');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const upload = multer({ storage: multer.memoryStorage() });
 
-// app.get('/usuarios', async (req, res) => {
-//   const { data, error } = await supabase.from('Usuarios').select('nombre, apellido');
-//   if (error) return res.status(400).json(error);
-//   res.json(data);
-// });
+app.use(express.json());
+app.use(express.static('src'));
+
+// const supabase = createClient(
+//   process.env.SUPABASE_URL,
+//   process.env.SUPABASE_SERVICE_ROLE_KEY
+// );
 
 app.get('/', (req, res) => {
-  res.send('<input type="file" id="fileInput" required><button type="submit" onclick="importarDelitos()">Subir</button>');
+  res.send('Servidor funcionando correctamente');
+});
+
+app.post('/importar', upload.single('archivo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Por favor, selecciona un archivo Excel.' });
+    }
+
+    const cantidadInsertados = await importarDelitos(req.file.buffer);
+
+    res.json({ 
+      success: true, 
+      message: `Se importaron con éxito ${cantidadInsertados} registros a la base de datos.` 
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: 'Hubo un error al procesar el archivo.',
+      details: error.message 
+    });
+  }
 });
 
 app.listen(PORT, () => {
