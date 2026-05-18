@@ -29,7 +29,7 @@ form.addEventListener('submit', async (e) =>{
       msj.style.color = "green";
       form.reset();
     } else {
-      msj.textContent = `Error: ${resultado.error}. ${resultado.details || ''}`;
+      msj.textContent = `Error: ${resultado.error} ${resultado.details || ''}`;
       msj.style.color = "red";
     }
   } catch (error) {

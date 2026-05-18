@@ -8,81 +8,140 @@ const supabase = createClient(
 );
 
 function corregirCoordenada(valor) {
-  if (!valor) return null;
+  if (valor === undefined || valor === null) return null;
   let str = valor.toString().trim();
-  
-  // Si tiene más de un punto (ej: -34.585.182)
-  if ((str.match(/\./g) || []).length > 1) {
-    // Removemos el primer signo menos si existe para procesar el número puro
-    const esNegativo = str.startsWith('-');
-    if (esNegativo) str = str.substring(1);
+  if (!str) return null;
 
-    // Quitamos todos los puntos
-    str = str.replace(/\./g, '');
+  const esNegativo = str.startsWith('-');
+  str = str.replace(/[^0-9]/g, '');
 
-    // Colocamos el punto decimal justo después de los primeros dos dígitos
-    str = str.substring(0, 2) + '.' + str.substring(2);
+  if (str.length < 2) return null;
+  let numeroCorregido = str.substring(0, 2) + '.' + str.substring(2);
 
-    // Devolvemos el signo menos si correspondía
-    if (esNegativo) str = '-' + str;
-  }
-  return str;
+  if (esNegativo) numeroCorregido = '-' + numeroCorregido;
+  return numeroCorregido;
 }
+
+// DICCIONARIOS DE CONVERSIÓN (Traduce lo que dice el Excel a tus Enums exactos)
+const MAPPING_TIPO = {
+  'robo': 'robo',
+  'hurto': 'hurto',
+  'amenazas': 'amenazas',
+  'lesiones': 'lesiones',
+  'vialidad': 'vialidad',
+  'homicidios': 'homicidios'
+};
+
+const MAPPING_SUBTIPO = {
+  'total': 'total',
+  'robo total': 'total',
+  'hurto total': 'total',
+  'automotor': 'automotor',
+  'robo automotor': 'automotor',
+  'hurto automotor': 'automotor',
+  'dolosas': 'dolosas',
+  'lesiones dolosas': 'dolosas',
+  'dolosos': 'dolosos',
+  'homicidios dolosos': 'dolosos',
+  'lesiones por siniestros viales': 'lesionesPorSiniestrosViales',
+  'lesionesporsiniestrosviales': 'lesionesPorSiniestrosViales',
+  'muertes por siniestros viales': 'muertesPorSiniestrosViales',
+  'muertesporsiniestrosviales': 'muertesPorSiniestrosViales'
+};
 
 async function importarDelitos(buffer) {
   const workbook = XLSX.read(buffer, { type: 'buffer' });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const filas = XLSX.utils.sheet_to_json(sheet);
+  
+  const filasMatriz = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  if (filasMatriz.length === 0) throw new Error("El archivo Excel está vacío.");
+
+  let indiceLat = -1, indiceLng = -1, indiceFecha = -1, indiceTipo = -1, indiceSubtipo = -1;
+
+  for (let i = 0; i < Math.min(filasMatriz.length, 10); i++) {
+    const fila = filasMatriz[i];
+    for (let j = 0; j < fila.length; j++) {
+      if (!fila[j]) continue;
+      const celdaTexto = fila[j].toString().toLowerCase().trim();
+      if (celdaTexto.includes('latitud')) indiceLat = j;
+      if (celdaTexto.includes('longitud')) indiceLng = j;
+      if (celdaTexto.includes('fecha')) indiceFecha = j;
+      if (celdaTexto.includes('tipo') && !celdaTexto.includes('sub')) indiceTipo = j;
+      if (celdaTexto.includes('subtipo')) indiceSubtipo = j;
+    }
+    if (indiceLat !== -1 && indiceLng !== -1) {
+      filasMatriz.splice(0, i + 1); 
+      break;
+    }
+  }
+
+  if (indiceLat === -1 || indiceLng === -1) {
+    throw new Error("No se encontraron las columnas 'latitud' y 'longitud'.");
+  }
 
   const registros = [];
 
-  for (const fila of filas) {
-    // 1. Verificación estricta: Si no trae latitud o longitud, saltamos esta fila
-    if (!fila['latitud'] || !fila['longitud']) {
-      console.warn(`Fila omitida por falta de coordenadas:`, fila);
-      continue;
-    }
+  for (const fila of filasMatriz) {
+    const latRaw = fila[indiceLat];
+    const lngRaw = fila[indiceLng];
+    if (latRaw === undefined || latRaw === null || lngRaw === undefined || lngRaw === null) continue;
 
-    // 2. Procesamos y limpiamos las coordenadas
-    const lat = corregirCoordenada(fila['latitud']);
-    const lng = corregirCoordenada(fila['longitud']);
+    const lat = corregirCoordenada(latRaw);
+    const lng = corregirCoordenada(lngRaw);
+    if (!lat || !lng) continue;
 
-    // Doble verificación por si la limpieza devolvió algo inválido
-    if (!lat || !lng) {
-      console.warn(`Fila omitida debido a coordenadas corruptas o inválidas:`, fila);
-      continue;
-    }
-
-    // 3. Procesamos la fecha
+    const fechaRaw = indiceFecha !== -1 ? fila[indiceFecha] : null;
     let fechaFormateada = null;
-    if (fila['fecha']) {
-      const parsedDate = new Date(fila['fecha']);
+
+    if (fechaRaw !== undefined && fechaRaw !== null) {
+      let parsedDate;
+
+      // SI EXCEL LO DEVOLVIÓ COMO SU NÚMERO INTERNO (Ej: 45292)
+      if (typeof fechaRaw === 'number') {
+        // XLSX.SSF.parse_date_code convierte el número de Excel en un objeto {y, m, d, ...]
+        const dateObj = XLSX.SSF.parse_date_code(fechaRaw);
+        // Creamos la fecha usando año, mes (0-11 en JS) y día
+        parsedDate = new Date(dateObj.y, dateObj.m - 1, dateObj.d);
+      } else {
+        // SI VINO COMO UN TEXTO NORMAL (Ej: "1/1/2024")
+        parsedDate = new Date(fechaRaw);
+      }
+
+      // Validamos que sea una fecha correcta antes de guardarla
       if (!isNaN(parsedDate.getTime())) {
-        fechaFormateada = parsedDate.toISOString().split('T')[0];
+        // Sumamos la diferencia horaria local para evitar que se atrase un día al pasar a ISO
+        const offset = parsedDate.getTimezoneOffset();
+        const dateCorrected = new Date(parsedDate.getTime() - (offset * 60 * 1000));
+        fechaFormateada = dateCorrected.toISOString().split('T')[0];
       }
     }
 
-    // 4. Armamos el objeto asegurando que 'ubicacion' tenga datos válidos
+    // Leer valores del Excel y limpiarlos
+    const tipoExcel = indiceTipo !== -1 && fila[indiceTipo] ? fila[indiceTipo].toString().toLowerCase().trim() : '';
+    const subtipoExcel = indiceSubtipo !== -1 && fila[indiceSubtipo] ? fila[indiceSubtipo].toString().toLowerCase().trim() : '';
+
+    // Buscar la equivalencia exacta en nuestros diccionarios
+    const tipoEnum = MAPPING_TIPO[tipoExcel] || 'robo'; // 'robo' por defecto si no coincide
+    const subtipoEnum = MAPPING_SUBTIPO[subtipoExcel] || null;
+
     registros.push({
-      ubicacion: `(${lng}, ${lat})`, // Formato Point: (longitud, latitud)
+      ubicacion: `(${lng}, ${lat})`, 
       fecha: fechaFormateada,
-      tipo: fila['tipo'],
-      subTipo: fila['subtipo'] || fila['subTipo'],
+      tipo: tipoEnum,       
+      subTipo: subtipoEnum, 
       gravedad: null
     });
   }
 
-  // Si después de filtrar nos quedamos sin registros válidos, avisamos antes de ir a la DB
   if (registros.length === 0) {
-    throw new Error('El archivo no contiene ninguna fila con coordenadas válidas de latitud y longitud.');
+    throw new Error("No se pudo extraer ningún registro válido.");
   }
 
-  // Inserción masiva en Supabase
   const { error } = await supabase.from('Delitos').insert(registros);
   
   if (error) {
-    console.error("Error detallado de Supabase:", error);
-    throw error;
+    console.error("Error devuelto por Supabase al insertar:", error);
+    throw new Error(`Error de Supabase: ${error.message}`);
   }
   
   return registros.length;

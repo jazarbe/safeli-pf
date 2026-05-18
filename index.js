@@ -32,7 +32,7 @@ app.post('/importar', upload.single('archivo'), async (req, res) => {
 
     res.json({ 
       success: true, 
-      message: `Se importaron con éxito ${cantidadInsertados} registros a la base de datos.` 
+      message: `Se importaron con éxito ${cantidadInsertados} registro/s a la base de datos.` 
     });
 
   } catch (error) {
