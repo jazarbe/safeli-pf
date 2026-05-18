@@ -1,4 +1,4 @@
-import { importarDelitos } from './backOffice.js';
+import { importarDelitos } from './backoffice.js';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 require('dotenv').config();
