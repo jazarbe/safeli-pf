@@ -79,6 +79,17 @@ async function importarDelitos(buffer) {
     throw new Error("No se encontraron las columnas 'latitud' y 'longitud'.");
   }
 
+  // Traer tablas de Tipos y Subtipos una sola vez para calcular gravedades
+  const { data: tiposData, error: tiposError } = await supabase.from('Tipos').select('nombre, gravedad');
+  if (tiposError) throw new Error(`Error al obtener Tipos: ${tiposError.message}`);
+
+  const { data: subtiposData, error: subtiposError } = await supabase.from('Subtipos').select('nombre, gravedad');
+  if (subtiposError) throw new Error(`Error al obtener Subtipos: ${subtiposError.message}`);
+
+  // Mapas nombre -> gravedad para lookup O(1)
+  const gravedadPorTipo    = Object.fromEntries(tiposData.map(t => [t.nombre, t.gravedad]));
+  const gravedadPorSubtipo = Object.fromEntries(subtiposData.map(s => [s.nombre, s.gravedad]));
+
   const registros = [];
 
   for (const fila of filasMatriz) {
@@ -124,12 +135,19 @@ async function importarDelitos(buffer) {
     const tipoEnum = MAPPING_TIPO[tipoExcel] || 'robo'; // [GEMINI] 'robo' por defecto si no coincide
     const subtipoEnum = MAPPING_SUBTIPO[subtipoExcel] || null;
 
+    // Calcular gravedad = gravedad del Tipo × gravedad del Subtipo
+    const gravTipo    = gravedadPorTipo[tipoEnum] ?? null;
+    const gravSubtipo = subtipoEnum ? (gravedadPorSubtipo[subtipoEnum] ?? null) : null;
+    const gravedad    = gravTipo !== null && gravSubtipo !== null
+      ? gravTipo * gravSubtipo
+      : null;
+
     registros.push({
       ubicacion: `(${lng}, ${lat})`, 
       fecha: fechaFormateada,
       tipo: tipoEnum,       
       subTipo: subtipoEnum, 
-      gravedad: null
+      gravedad
     });
   }
 
