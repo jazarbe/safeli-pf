@@ -22,7 +22,7 @@ function corregirCoordenada(valor) {
   return numeroCorregido;
 }
 
-// DICCIONARIOS DE CONVERSIÓN (Traduce lo que dice el Excel a tus Enums exactos)
+// [GEMINI] DICCIONARIOS DE CONVERSIÓN (Traduce lo que dice el Excel a tus Enums exactos)
 const MAPPING_TIPO = {
   'robo': 'robo',
   'hurto': 'hurto',
@@ -96,32 +96,32 @@ async function importarDelitos(buffer) {
     if (fechaRaw !== undefined && fechaRaw !== null) {
       let parsedDate;
 
-      // SI EXCEL LO DEVOLVIÓ COMO SU NÚMERO INTERNO (Ej: 45292)
+      // [GEMINI] SI EXCEL LO DEVOLVIÓ COMO SU NÚMERO INTERNO (Ej: 45292)
       if (typeof fechaRaw === 'number') {
-        // XLSX.SSF.parse_date_code convierte el número de Excel en un objeto {y, m, d, ...]
+        // [GEMINI] XLSX.SSF.parse_date_code convierte el número de Excel en un objeto {y, m, d, ...]
         const dateObj = XLSX.SSF.parse_date_code(fechaRaw);
-        // Creamos la fecha usando año, mes (0-11 en JS) y día
+        // [GEMINI] Creamos la fecha usando año, mes (0-11 en JS) y día
         parsedDate = new Date(dateObj.y, dateObj.m - 1, dateObj.d);
       } else {
-        // SI VINO COMO UN TEXTO NORMAL (Ej: "1/1/2024")
+        // [GEMINI] SI VINO COMO UN TEXTO NORMAL (Ej: "1/1/2024")
         parsedDate = new Date(fechaRaw);
       }
 
-      // Validamos que sea una fecha correcta antes de guardarla
+      // [GEMINI] Validamos que sea una fecha correcta antes de guardarla
       if (!isNaN(parsedDate.getTime())) {
-        // Sumamos la diferencia horaria local para evitar que se atrase un día al pasar a ISO
+        // [GEMINI] Sumamos la diferencia horaria local para evitar que se atrase un día al pasar a ISO
         const offset = parsedDate.getTimezoneOffset();
         const dateCorrected = new Date(parsedDate.getTime() - (offset * 60 * 1000));
         fechaFormateada = dateCorrected.toISOString().split('T')[0];
       }
     }
 
-    // Leer valores del Excel y limpiarlos
+    // [GEMINI] Leer valores del Excel y limpiarlos
     const tipoExcel = indiceTipo !== -1 && fila[indiceTipo] ? fila[indiceTipo].toString().toLowerCase().trim() : '';
     const subtipoExcel = indiceSubtipo !== -1 && fila[indiceSubtipo] ? fila[indiceSubtipo].toString().toLowerCase().trim() : '';
 
-    // Buscar la equivalencia exacta en nuestros diccionarios
-    const tipoEnum = MAPPING_TIPO[tipoExcel] || 'robo'; // 'robo' por defecto si no coincide
+    // [GEMINI] Buscar la equivalencia exacta en nuestros diccionarios
+    const tipoEnum = MAPPING_TIPO[tipoExcel] || 'robo'; // [GEMINI] 'robo' por defecto si no coincide
     const subtipoEnum = MAPPING_SUBTIPO[subtipoExcel] || null;
 
     registros.push({

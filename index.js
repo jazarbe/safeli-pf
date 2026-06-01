@@ -1,12 +1,13 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 require('dotenv').config();
+
 const express = require('express');
 const multer = require('multer');
+const DelitosQuery = require('./src/controllers/db-controller.js');
 const { importarDelitos } = require('./backoffice.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const { createClient } = require('@supabase/supabase-js');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -43,6 +44,8 @@ app.post('/importar', upload.single('archivo'), async (req, res) => {
     });
   }
 });
+
+app.use('/delitos', DelitosQuery);
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`)
