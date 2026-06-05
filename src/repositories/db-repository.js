@@ -1,5 +1,4 @@
-import sql from '../db.js';
-import pkg from '@supabase/supabase-js';
+const pkg = require('@supabase/supabase-js');
 const { createClient } = pkg;
 
 // [GEMINI] Habilitar bypass de TLS únicamente si se especifica en desarrollo (Proxy de escuelas)
@@ -9,7 +8,7 @@ if (process.env.NODE_TLS_ALLOW_SELF_SIGNED === 'true' || process.env.NODE_ENV !=
 }
 
 const supabase = createClient(
-  process.env.SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
@@ -18,13 +17,13 @@ function pad(n) {
   return String(n).padStart(2, '0');
 }
 
-export default class DBRepository {
+module.exports = class DBRepository {
   async getDelitosAsync(filters) {
     const { mes, anio, tipos_delito } = filters;
     console.log('DEBUG - Filtros de delincuencia solicitados:', { mes, anio, tipos_delito });
 
     try {
-        let query = supabase.from('Delitos').select('*');
+      let query = supabase.from('Delitos').select('*');
 
         // [GEMINI] Lógica secuencial de filtrado temporal por Fechas
         if (mes && anio) {
@@ -52,17 +51,17 @@ export default class DBRepository {
             query = query.in('tipo', listaDelitos);
         }
 
-        const { data, error } = await query;
+      const { data, error } = await query;
 
-        if (error) {
+      if (error) {
         console.error('Supabase query error:', error);
-        return res.status(400).json({ message: 'Error en la consulta a la base de datos', details: error.message });
-        }
+        throw new Error(error.message);
+      }
 
-        return res.json(data);
+      return data;
     } catch (err) {
-        console.error('Server error:', err);
-        return res.status(500).json({ message: 'Error interno del servidor', details: err.message });
+      console.error('Server error:', err);
+      throw err;
     }
+  }
 };
-}

@@ -1,15 +1,15 @@
-import DBRepository from "../repositories/db-repository";
+const DBRepository = require("../repositories/db-repository.js");
 
 const dbRepository = new DBRepository();
 
-export default class DBService {
+module.exports = class DBService {
   async getDelitosAsync(filters) {
     try {
-        const data = await dbRepository.getDelitosAsync(filters);
-        return data;
+      const data = await dbRepository.getDelitosAsync(filters);
+      return data;
     } catch (err) {
-        console.error('Error en DBService:', err);
-        throw new Error('Error al obtener los delitos');
+      console.error('Error en DBService:', err);
+      throw new Error('Error al obtener los delitos');
     }
   }
-}
+};

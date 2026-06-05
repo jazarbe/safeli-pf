@@ -2,13 +2,13 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 require('dotenv').config();
 
 const express = require('express');
-const multer = require('multer');
-const DelitosQuery = require('./src/controllers/db-controller.js');
-const { importarDelitos } = require('./backoffice.js');
+const DBRouter = require('./src/controllers/db-controller.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const { importarDelitos } = require('./backoffice.js');
+const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(express.json());
@@ -45,7 +45,7 @@ app.post('/importar', upload.single('archivo'), async (req, res) => {
   }
 });
 
-app.use('/delitos', DelitosQuery);
+app.use('/delitos', DBRouter);
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`)

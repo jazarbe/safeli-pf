@@ -1,20 +1,44 @@
-import DBService from '../services/db-service';
-const dbService = new DBService();
-
-const express = require('express');
-const router = require('express').Router();
-const { createClient } = require('@supabase/supabase-js');
-
+const DBService = require('../services/db-service.js');
 require('dotenv').config();
+const router = require('express').Router();
 
-// consulta para mostrar los delitos filtrados por mes, año y tipo de delito
-// a terminar
-router.get('/', async (req, res) => {
+const { importarDelitos } = require('../../backoffice.js');
+const multer = require('multer');
+
+const upload = multer({ storage: multer.memoryStorage() });
+
+const svc = new DBService();
+
+router.get('/delitos', async (req, res) => {
   try {
-      const data = await dbService.getDelitosAsync(req.query);
-      res.json(data);
+    const data = await svc.getDelitosAsync(req.query);
+    res.json(data);
   } catch (err) {
-      console.error('Error en DBController:', err);
-      res.status(500).json({ message: 'Error al obtener los delitos', details: err.message });
+    console.error('Error en DBController:', err);
+    res.status(500).json({ message: 'Error al obtener los delitos', details: err.message });
   }
 });
+
+router.post('/importar', upload.single('archivo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Por favor, selecciona un archivo Excel.' });
+    }
+
+    const cantidadInsertados = await importarDelitos(req.file.buffer);
+
+    res.json({ 
+      success: true, 
+      message: `Se importaron con éxito ${cantidadInsertados} registro/s a la base de datos.` 
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: 'Hubo un error al procesar el archivo.',
+      details: error.message 
+    });
+  }
+});
+
+module.exports = router;
