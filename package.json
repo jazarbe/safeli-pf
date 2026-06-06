@@ -16,34 +16,26 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "\"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@mapbox/polyline": "^1.2.1",
-    "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.107.0",
     "@types/react": "~19.2.10",
     "dotenv": "^17.4.2",
-    "expo": "^55.0.24",
-    "expo-localization": "~55.0.14",
-    "expo-location": "~55.1.10",
     "express": "^5.2.1",
     "http": "^0.0.1-security",
     "https": "^1.0.0",
     "multer": "^2.1.1",
     "pg": "^8.20.0",
     "postgres": "^3.4.9",
-    "react-native-maps": "1.27.2",
-    "string-similarity": "^4.0.4",
     "typescript": "~5.9.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/mapbox__polyline": "^1.0.5",
     "@types/node": "^25.8.0",
-    "@types/react-native": "^0.72.8",
-    "prisma": "^7.8.0",
     "typescript": "~5.9.2"
   }
 }

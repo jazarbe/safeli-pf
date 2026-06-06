@@ -1,5 +1,4 @@
-const pkg = require('@supabase/supabase-js');
-const { createClient } = pkg;
+const { createClient } = require('@supabase/supabase-js');
 
 // [GEMINI] Habilitar bypass de TLS únicamente si se especifica en desarrollo (Proxy de escuelas)
 if (process.env.NODE_TLS_ALLOW_SELF_SIGNED === 'true' || process.env.NODE_ENV !== 'production') {
@@ -8,7 +7,7 @@ if (process.env.NODE_TLS_ALLOW_SELF_SIGNED === 'true' || process.env.NODE_ENV !=
 }
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 

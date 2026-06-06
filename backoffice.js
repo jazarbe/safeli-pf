@@ -46,7 +46,8 @@ const MAPPING_SUBTIPO = {
   'lesiones por siniestros viales': 'lesionesPorSiniestrosViales',
   'lesionesporsiniestrosviales': 'lesionesPorSiniestrosViales',
   'muertes por siniestros viales': 'muertesPorSiniestrosViales',
-  'muertesporsiniestrosviales': 'muertesPorSiniestrosViales'
+  'muertesporsiniestrosviales': 'muertesPorSiniestrosViales',
+  'amenazas': null
 };
 
 async function importarDelitos(buffer) {
@@ -86,9 +87,10 @@ async function importarDelitos(buffer) {
   const { data: subtiposData, error: subtiposError } = await supabase.from('Subtipos').select('*');
   if (subtiposError) throw new Error(`Error al obtener Subtipos: ${subtiposError.message}`);
 
-  // Mapas nombre -> gravedad para lookup O(1)
+  // Mapas nombre -> gravedad / id para lookup O(1)
   const gravedadPorTipo    = Object.fromEntries(tiposData.map(t => [t.nombre, t.gravedad]));
   const gravedadPorSubtipo = Object.fromEntries(subtiposData.map(s => [s.nombre, s.gravedad]));
+  const idPorSubtipo       = Object.fromEntries(subtiposData.map(s => [s.nombre, s.id]));
 
   const registros = [];
 
@@ -139,15 +141,15 @@ async function importarDelitos(buffer) {
     const gravTipo = gravedadPorTipo[tipoEnum] ?? null;
     const gravSubtipo = subtipoEnum ? (gravedadPorSubtipo[subtipoEnum] ?? null) : null;
     const gravedad = gravTipo !== null && gravSubtipo !== null
-      ? gravTipo * gravSubtipo
+      ? Math.round(gravTipo * gravSubtipo)
       : null;
+    const idSubtipo = subtipoEnum ? (idPorSubtipo[subtipoEnum] ?? null) : null;
 
     registros.push({
-      ubicacion: `(${lng}, ${lat})`, 
+      ubicacion: `(${lng}, ${lat})`,
       fecha: fechaFormateada,
-      tipo: tipoEnum,       
-      subTipo: subtipoEnum, 
-      gravedad
+      gravedad,
+      idSubtipo
     });
   }
 
