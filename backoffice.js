@@ -47,7 +47,7 @@ const MAPPING_SUBTIPO = {
   'lesionesporsiniestrosviales': 'lesionesPorSiniestrosViales',
   'muertes por siniestros viales': 'muertesPorSiniestrosViales',
   'muertesporsiniestrosviales': 'muertesPorSiniestrosViales',
-  'amenazas': null
+  'amenazas': 'no_aplica'
 };
 
 async function importarDelitos(buffer) {
@@ -87,12 +87,13 @@ async function importarDelitos(buffer) {
   const { data: subtiposData, error: subtiposError } = await supabase.from('Subtipos').select('*');
   if (subtiposError) throw new Error(`Error al obtener Subtipos: ${subtiposError.message}`);
 
-  // Mapas nombre -> gravedad / id para lookup O(1)
-  const gravedadPorTipo    = Object.fromEntries(tiposData.map(t => [t.nombre, t.gravedad]));
-  const gravedadPorSubtipo = Object.fromEntries(subtiposData.map(s => [s.nombre, s.gravedad]));
-  const idPorSubtipo       = Object.fromEntries(subtiposData.map(s => [s.nombre, s.id]));
+  // Lookups con fallback a minúsculas por si los datos en la base cambian de formato (case-insensitive checking)
+  const gravedadPorTipo = Object.fromEntries(tiposData.map(t => [t.nombre.toLowerCase(), t.gravedad]));
+  const gravedadPorSubtipo = Object.fromEntries(subtiposData.map(s => [s.nombre.toLowerCase(), s.gravedad]));
+  const idPorSubtipo = Object.fromEntries(subtiposData.map(s => [s.nombre.toLowerCase(), s.id]));
 
   const registros = [];
+  let filasOmitidas = 0;
 
   for (const fila of filasMatriz) {
     const latRaw = fila[indiceLat];
@@ -129,39 +130,59 @@ async function importarDelitos(buffer) {
       }
     }
 
-    // [GEMINI] Leer valores del Excel y limpiarlos
+    // Mapeo de Categorías
     const tipoExcel = indiceTipo !== -1 && fila[indiceTipo] ? fila[indiceTipo].toString().toLowerCase().trim() : '';
     const subtipoExcel = indiceSubtipo !== -1 && fila[indiceSubtipo] ? fila[indiceSubtipo].toString().toLowerCase().trim() : '';
 
-    // [GEMINI] Buscar la equivalencia exacta en nuestros diccionarios
-    const tipoEnum = MAPPING_TIPO[tipoExcel] || 'robo'; // [GEMINI] 'robo' por defecto si no coincide
+    // Buscar la equivalencia exacta en nuestros diccionarios
+    const tipoEnum = MAPPING_TIPO[tipoExcel] || 'robo'; // 'robo' por defecto si no coincide
     const subtipoEnum = MAPPING_SUBTIPO[subtipoExcel] || null;
 
-    // Calcular gravedad = gravedad del Tipo × gravedad del Subtipo
-    const gravTipo = gravedadPorTipo[tipoEnum] ?? null;
-    const gravSubtipo = subtipoEnum ? (gravedadPorSubtipo[subtipoEnum] ?? null) : null;
-    const gravedad = gravTipo !== null && gravSubtipo !== null
+    if (!subtipoEnum) {
+      filasOmitidas++;
+      continue;
+    }
+
+    // Calcular gravedad y obtener IDs cruzando contra la DB en minúsculas
+    const gravTipo = gravedadPorTipo[tipoEnum.toLowerCase()] ?? null;
+    const gravSubtipo = gravedadPorSubtipo[subtipoEnum.toLowerCase()] ?? null;
+    const idSubtipo = idPorSubtipo[subtipoEnum.toLowerCase()] ?? null;
+
+    const gravedad = (gravTipo !== null && gravSubtipo !== null)
       ? Math.round(gravTipo * gravSubtipo)
       : null;
-    const idSubtipo = subtipoEnum ? (idPorSubtipo[subtipoEnum] ?? null) : null;
+
+    // Validación defensiva estricta antes de acumular la fila
+    if (gravedad === null || idSubtipo === null) {
+      console.warn(`[Fila Omitida] Conflicto de catálogos en DB para Tipo: ${tipoEnum}, Subtipo: ${subtipoEnum}`);
+      filasOmitidas++;
+      continue; 
+    }
 
     registros.push({
       ubicacion: `(${lng}, ${lat})`,
       fecha: fechaFormateada,
-      gravedad,
-      idSubtipo
+      gravedad: gravedad,
+      idSubtipo: idSubtipo
     });
   }
 
   if (registros.length === 0) {
-    throw new Error("No se pudo extraer ningún registro válido.");
+    throw new Error(`No se pudo extraer ningún registro válido. (Se omitieron ${filasOmitidas} filas por violar restricciones NOT NULL)`);
   }
 
-  const { error } = await supabase.from('Delitos').insert(registros);
-  
-  if (error) {
-    console.error("Error devuelto por Supabase al insertar:", error);
-    throw new Error(`Error de Supabase: ${error.message}`);
+  console.log(`Intentando insertar ${registros.length} registros válidos. Se ignoraron ${filasOmitidas} filas inválidas.`);
+
+  // [GEMINI] Inserción controlada por lotes (Chunks) de 1000 para evitar que Supabase/PostgREST aborte por Timeouts
+  const TAMANIO_LOTE = 1000;
+  for (let i = 0; i < registros.length; i += TAMANIO_LOTE) {
+    const lote = registros.slice(i, i + TAMANIO_LOTE);
+    const { error } = await supabase.from('Delitos').insert(lote);
+    
+    if (error) {
+      console.error("Error devuelto por Supabase al insertar el lote:", error);
+      throw new Error(`Error de Supabase en lote index ${i}: ${error.message} - Detalles: ${error.details}`);
+    }
   }
   
   return registros.length;
