@@ -87,10 +87,19 @@ async function importarDelitos(buffer) {
   const { data: subtiposData, error: subtiposError } = await supabase.from('Subtipos').select('*');
   if (subtiposError) throw new Error(`Error al obtener Subtipos: ${subtiposError.message}`);
 
-  // Lookups con fallback a minúsculas por si los datos en la base cambian de formato (case-insensitive checking)
   const gravedadPorTipo = Object.fromEntries(tiposData.map(t => [t.nombre.toLowerCase(), t.gravedad]));
-  const gravedadPorSubtipo = Object.fromEntries(subtiposData.map(s => [s.nombre.toLowerCase(), s.gravedad]));
-  const idPorSubtipo = Object.fromEntries(subtiposData.map(s => [s.nombre.toLowerCase(), s.id]));
+  const nombreTipoPorId = Object.fromEntries(tiposData.map(t => [t.id, t.nombre.toLowerCase()]));
+  const idPorSubtipoCombinado = {};
+  const gravedadPorSubtipoCombinado = {};
+
+  for (const s of subtiposData) {
+    const nombreTipoBase = nombreTipoPorId[s.idTipo]; // Busca si el ID corresponde a 'robo', 'hurto', etc.
+    if (nombreTipoBase) {
+      const claveCombinada = `${nombreTipoBase}_${s.nombre.toLowerCase()}`; // Ejemplo: 'robo_total'
+      idPorSubtipoCombinado[claveCombinada] = s.id;
+      gravedadPorSubtipoCombinado[claveCombinada] = s.gravedad;
+    }
+  }
 
   const registros = [];
   let filasOmitidas = 0;
@@ -143,24 +152,24 @@ async function importarDelitos(buffer) {
       continue;
     }
 
-    // Calcular gravedad y obtener IDs cruzando contra la DB en minúsculas
+    const claveBusqueda = `${tipoEnum.toLowerCase()}_${subtipoEnum.toLowerCase()}`;
+
     const gravTipo = gravedadPorTipo[tipoEnum.toLowerCase()] ?? null;
-    const gravSubtipo = gravedadPorSubtipo[subtipoEnum.toLowerCase()] ?? null;
-    const idSubtipo = idPorSubtipo[subtipoEnum.toLowerCase()] ?? null;
+    const gravSubtipo = gravedadPorSubtipoCombinado[claveBusqueda] ?? null;
+    const idSubtipo = idPorSubtipoCombinado[claveBusqueda] ?? null;
 
     const gravedad = (gravTipo !== null && gravSubtipo !== null)
-      ? Math.round(gravTipo * gravSubtipo)
+      ? (gravTipo * gravSubtipo)
       : null;
 
-    // Validación defensiva estricta antes de acumular la fila
     if (gravedad === null || idSubtipo === null) {
-      console.warn(`[Fila Omitida] Conflicto de catálogos en DB para Tipo: ${tipoEnum}, Subtipo: ${subtipoEnum}`);
+      console.warn(`[Fila Omitida] No se cruzó en DB. Tipo: ${tipoEnum}, Subtipo: ${subtipoEnum}`);
       filasOmitidas++;
       continue; 
     }
 
     registros.push({
-      ubicacion: `(${lng}, ${lat})`,
+      ubicacion: `(${lat}, ${lng})`,
       fecha: fechaFormateada,
       gravedad: gravedad,
       idSubtipo: idSubtipo
