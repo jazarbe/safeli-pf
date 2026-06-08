@@ -2,6 +2,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 require('dotenv').config();
 
 const express = require('express');
+const path = require('path');
 const DBRouter = require('./src/controllers/db-controller.js');
 
 const app = express();
@@ -11,18 +12,31 @@ const { importarDelitos } = require('./backoffice.js');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Middleware para parsear JSON y formularios
 app.use(express.json());
-app.use(express.static('src'));
 
-// const supabase = createClient(
-//   process.env.SUPABASE_URL,
-//   process.env.SUPABASE_SERVICE_ROLE_KEY
-// );
+// Servir archivos estáticos (CSS, JS del cliente, imágenes) desde la carpeta 'src'
+app.use(express.static(path.join(__dirname, 'src')));
 
+// --- RUTAS DE LA API (SUPABASE) ---
+// Conectamos tu controlador para que responda bajo el prefijo /api o /delitos
+app.use('/delitos', DBRouter); 
+
+// --- RUTAS DE LAS VISTAS (HTML) ---
+
+// Redirección o muestra del Index principal (landing o login si existiera)
 app.get('/', (req, res) => {
-  res.send('Servidor funcionando correctamente');
+  // Asumiendo que index.html está en la raíz de tu proyecto o dentro de src. 
+  // Si está dentro de src, cambiá el path a: 'src', 'index.html'
+  res.sendFile(path.join(__dirname, 'src', 'index.html'));
 });
 
+// Ruta amigable para ir directo al panel de control de carga de delitos
+app.get('/backoffice', (req, res) => {
+  res.sendFile(path.join(__dirname, 'src', 'backoffice.html'));
+});
+
+// Mantenemos tu endpoint global de importación por si el formulario del HTML apunta directo a la raíz
 app.post('/importar', upload.single('archivo'), async (req, res) => {
   try {
     if (!req.file) {
@@ -37,17 +51,12 @@ app.post('/importar', upload.single('archivo'), async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      error: 'Hubo un error al procesar el archivo.',
-      details: error.message 
-    });
+    console.error('Error al importar:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.use('/delitos', DBRouter);
-
 app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`)
-  console.log(`http://localhost:${PORT}/`)
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`📊 Panel de control disponible en: http://localhost:${PORT}/backoffice`);
 });
