@@ -8,7 +8,7 @@ const DBRouter = require('./src/controllers/db-controller.js');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const { importarDelitos } = require('./backoffice.js');
+const { importarDelitos } = require('./src/backoffice/backoffice.js');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -31,9 +31,8 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'src', 'index.html'));
 });
 
-// Ruta amigable para ir directo al panel de control de carga de delitos
 app.get('/backoffice', (req, res) => {
-  res.sendFile(path.join(__dirname, 'src', 'backoffice.html'));
+  res.sendFile(path.join(__dirname, 'src', 'backoffice', 'backoffice.html'));
 });
 
 // Mantenemos tu endpoint global de importación por si el formulario del HTML apunta directo a la raíz

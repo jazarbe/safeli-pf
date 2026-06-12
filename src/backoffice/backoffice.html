@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Backoffice — Delitos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="backoffice.css">
+  </head>
+  <body>
+    <header>
+      <div class="logo"><img src="../img/imagotipo_color.png" alt="Logo Safeli"></div>
+    </header>
+    
+    <div id="loader"><div class="spinner"></div></div>
+    <div class="layout">
+
+      <!-- ─── SIDEBAR ─── -->
+      <aside>
+        <div class="filter-section-title">Filtros</div>
+        <div class="filter-group">
+          <div class="filter-label">Rango de ID</div>
+          <div class="row2">
+            <input type="number" id="f-id-desde" placeholder="Desde"/>
+            <input type="number" id="f-id-hasta" placeholder="Hasta"/>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">Período</div>
+          <div class="row2">
+            <select id="f-mes">
+              <option value="">Mes</option>
+              <option value="1">Enero</option><option value="2">Febrero</option>
+              <option value="3">Marzo</option><option value="4">Abril</option>
+              <option value="5">Mayo</option><option value="6">Junio</option>
+              <option value="7">Julio</option><option value="8">Agosto</option>
+              <option value="9">Septiembre</option><option value="10">Octubre</option>
+              <option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select>
+            <input type="number" id="f-anio" placeholder="Año" min="2000" max="2099"/>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">Gravedad</div>
+          <div class="row2">
+            <input type="number" id="f-grav-min" placeholder="Mín" step="0.1"/>
+            <input type="number" id="f-grav-max" placeholder="Máx" step="0.1"/>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">Tipo de delito</div>
+          <select id="f-tipo">
+            <option value="">Todos los tipos</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">Subtipo</div>
+          <select id="f-subtipo">
+            <option value="">Todos los subtipos</option>
+          </select>
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary" id="btn-aplicar">Aplicar filtros</button>
+          <button class="btn btn-ghost"   id="btn-limpiar">Limpiar</button>
+        </div>
+
+        <!-- Importar -->
+        <div class="import-box">
+          <div class="filter-section-title">Importar datos</div>
+          <div class="file-drop" id="file-drop">
+            <div class="file-drop-icon">📂</div>
+            <div class="file-drop-text">Arrastrá o <b>seleccioná</b> un Excel</div>
+            <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none"/>
+          </div>
+          <div id="file-name"></div>
+          <button class="btn btn-primary" id="btn-importar" disabled>Importar</button>
+          <div id="import-result"></div>
+        </div>
+      </aside>
+
+      <!-- ─── MAIN ─── -->
+      <main>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <div class="result-count" id="result-count">─</div>
+            <div class="sort-row">
+              <label>Ordenar por</label>
+              <select id="sort-by">
+                <option value="id">ID</option>
+                <option value="fecha">Fecha</option>
+                <option value="gravedad">Gravedad</option>
+                <option value="idSubtipo">Subtipo ID</option>
+              </select>
+              <select id="sort-dir">
+                <option value="asc">↑ ASC</option>
+                <option value="desc">↓ DESC</option>
+              </select>
+            </div>
+          </div>
+          <div class="page-size-row">
+            <label>Filas</label>
+            <select id="page-size">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-col="id"        class="active">ID <span class="sort-icon">↑</span></th>
+                <th>Ubicación</th>
+                <th data-col="fecha">Fecha <span class="sort-icon">↕</span></th>
+                <th data-col="gravedad">Gravedad <span class="sort-icon">↕</span></th>
+                <th>Tipo</th>
+                <th>Subtipo</th>
+                <th data-col="idSubtipo">ID Subtipo <span class="sort-icon">↕</span></th>
+              </tr>
+            </thead>
+            <tbody id="table-body">
+              <!-- rows injected by JS -->
+            </tbody>
+          </table>
+          <div class="empty-state" id="empty-state" style="display:none">
+            <div class="empty-icon">🔍</div>
+            No se encontraron registros con los filtros aplicados.
+          </div>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+      </main>
+    </div>
+    <script src="backoffice.client.js"></script>
+  </body>
+</html>

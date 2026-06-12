@@ -2,7 +2,7 @@ const DBService = require('../services/db-service.js');
 require('dotenv').config();
 const router = require('express').Router();
 
-const { importarDelitos } = require('../../backoffice.js');
+const { importarDelitos } = require('../backoffice/backoffice.js');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 

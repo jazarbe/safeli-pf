@@ -1,3 +1,7 @@
+window.goToBackoffice = function() {
+  window.location.href = '/backoffice';
+};
+
 const form = document.getElementById("upload");
 const fileInput = document.getElementById("file");
 const msj = document.getElementById("mensaje");
