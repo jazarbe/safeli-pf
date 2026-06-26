@@ -5,6 +5,10 @@ const express = require('express');
 const path = require('path');
 const DBRouter = require('./src/controllers/db-controller.js');
 
+// === INTEGRACIÓN DE SAFELI-SCORE ===
+// Importamos la función dinámica desde su carpeta correspondiente
+const { obtenerRutaPeatonalSegura } = require('./src/safeli-score/ruteoService.js');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -22,12 +26,37 @@ app.use(express.static(path.join(__dirname, 'src')));
 // Conectamos tu controlador para que responda bajo el prefijo /api o /delitos
 app.use('/delitos', DBRouter); 
 
-// --- RUTAS DE LAS VISTAS (HTML) ---
+// ==========================================================
+// --- NUEVO ENDPOINT: RUTEO SEGURO (OPENROUTESERVICE) ---
+// ==========================================================
+app.post('/api/calcular-camino-seguro', async (req, res) => {
+  try {
+    const { origen, destino } = req.body; // El celular mandará { origen: [lng, lat], destino: [lng, lat] }
 
-// Redirección o muestra del Index principal (landing o login si existiera)
+    if (!origen || !destino) {
+      return res.status(400).json({ 
+        error: 'Faltan las coordenadas de origen o destino.' 
+      });
+    }
+
+    console.log(`📍 API Safeli: Calculando ruta segura desde ${origen} hasta ${destino}...`);
+
+    // Ejecutamos tu lógica que esquiva los polígonos de Supabase
+    const rutaSegura = await obtenerRutaPeatonalSegura(origen, destino);
+
+    // Devolvemos el GeoJSON limpio al Front End de React Native
+    return res.json(rutaSegura);
+
+  } catch (error) {
+    console.error('❌ Error en el endpoint de ruteo seguro:', error.message);
+    return res.status(500).json({ 
+      error: 'Error interno al calcular la ruta segura.' 
+    });
+  }
+});
+
+// --- RUTAS DE LAS VISTAS (HTML) ---
 app.get('/', (req, res) => {
-  // Asumiendo que index.html está en la raíz de tu proyecto o dentro de src. 
-  // Si está dentro de src, cambiá el path a: 'src', 'index.html'
   res.sendFile(path.join(__dirname, 'src', 'index.html'));
 });
 
@@ -58,4 +87,5 @@ app.post('/importar', upload.single('archivo'), async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
   console.log(`📊 Panel de control disponible en: http://localhost:${PORT}/backoffice`);
+  console.log(`🗺️ Servicio de Mapa Seguro activado en: http://localhost:${PORT}/api/calcular-camino-seguro`);
 });
