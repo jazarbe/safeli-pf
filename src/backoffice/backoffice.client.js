@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   ESTADO GLOBAL
+   ESTADO GLOBAL Y CONTROLES
 ═══════════════════════════════════════════════════════════════ */
 let currentPage   = 1;
 let totalPages    = 1;
@@ -15,8 +15,13 @@ const resultCount = document.getElementById('result-count');
 const emptyState  = document.getElementById('empty-state');
 const loader      = document.getElementById('loader');
 
+/* TEMA TOGGLE REFS */
+const themeToggleBtn = document.getElementById('theme-toggle');
+const themeIcon      = document.getElementById('theme-icon');
+const themeText      = document.getElementById('theme-text');
+
 /* ═══════════════════════════════════════════════════════════════
-   UTILIDADES
+   UTILIDADES Y MANEJO DE TEMA
 ═══════════════════════════════════════════════════════════════ */
 function showLoader(on) { loader.style.display = on ? 'flex' : 'none'; }
 
@@ -40,8 +45,32 @@ function skeletonRows(n) {
     </tr>`).join('');
 }
 
+function initTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+  updateThemeUI(currentTheme);
+}
+
+function updateThemeUI(theme) {
+  if (theme === 'dark') {
+    themeIcon.textContent = '☀️';
+    themeText.textContent = 'Modo Claro';
+  } else {
+    themeIcon.textContent = '🌙';
+    themeText.textContent = 'Modo Oscuro';
+  }
+}
+
+themeToggleBtn.addEventListener('click', () => {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  updateThemeUI(newTheme);
+});
+
 /* ═══════════════════════════════════════════════════════════════
-   TABLA — RENDER
+   TABLA — RENDER Y FETCH
 ═══════════════════════════════════════════════════════════════ */
 function renderRows(rows) {
   if (!rows || rows.length === 0) {
@@ -94,14 +123,13 @@ function updateSortHeaders() {
   document.querySelectorAll('th[data-col]').forEach(th => {
     const col = th.dataset.col;
     th.classList.toggle('active', col === sortBy);
-    th.querySelector('.sort-icon').textContent =
-      col !== sortBy ? '↕' : sortDir === 'asc' ? '↑' : '↓';
+    const sortIcon = th.querySelector('.sort-icon');
+    if (sortIcon) {
+      sortIcon.textContent = col !== sortBy ? '↕' : sortDir === 'asc' ? '↑' : '↓';
+    }
   });
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   TABLA — FETCH
-═══════════════════════════════════════════════════════════════ */
 async function fetchDelitos(page = 1) {
   currentPage = page;
   tableBody.innerHTML = skeletonRows(10);
@@ -140,7 +168,7 @@ async function fetchDelitos(page = 1) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   FILTROS — DROPDOWNS TIPOS / SUBTIPOS
+   FILTROS — DROPDOWNS Y EVENTOS
 ═══════════════════════════════════════════════════════════════ */
 async function cargarTipos() {
   try {
@@ -172,9 +200,6 @@ async function cargarSubtipos(idTipo = '') {
   } catch (e) { console.warn('No se pudieron cargar los subtipos:', e); }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   FILTROS — EVENTOS
-═══════════════════════════════════════════════════════════════ */
 document.getElementById('f-tipo').addEventListener('change', e => cargarSubtipos(e.target.value));
 
 document.getElementById('btn-aplicar').addEventListener('click', () => {
@@ -201,7 +226,6 @@ document.getElementById('btn-limpiar').addEventListener('click', () => {
   fetchDelitos(1);
 });
 
-/* ─── sort por headers de tabla ─── */
 document.querySelectorAll('th[data-col]').forEach(th => {
   th.addEventListener('click', () => {
     const col     = th.dataset.col;
@@ -222,7 +246,7 @@ document.getElementById('sort-dir').addEventListener('change',  () => fetchDelit
 document.getElementById('page-size').addEventListener('change', () => fetchDelitos(1));
 
 /* ═══════════════════════════════════════════════════════════════
-   IMPORTACIÓN — DRAG & DROP + FILE PICKER
+   IMPORTACIÓN — DRAG & DROP + PICKER (CORREGIDO)
 ═══════════════════════════════════════════════════════════════ */
 const fileDrop     = document.getElementById('file-drop');
 const fileInput    = document.getElementById('file-input');
@@ -240,11 +264,9 @@ function setFile(file) {
   importResult.style.display = 'none';
 }
 
-/* click en el drop zone → abre el file picker */
 fileDrop.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', e => setFile(e.target.files[0]));
 
-/* drag & drop */
 fileDrop.addEventListener('dragover', e => { e.preventDefault(); fileDrop.classList.add('dragging'); });
 fileDrop.addEventListener('dragleave', ()  => fileDrop.classList.remove('dragging'));
 fileDrop.addEventListener('drop', e => {
@@ -253,7 +275,6 @@ fileDrop.addEventListener('drop', e => {
   setFile(e.dataTransfer.files[0]);
 });
 
-/* ─── botón Importar ─── */
 btnImportar.addEventListener('click', async () => {
   if (!selectedFile) return;
 
@@ -266,23 +287,23 @@ btnImportar.addEventListener('click', async () => {
   formData.append('archivo', selectedFile);
 
   try {
-    const res  = await fetch('/delitos/importar', { method: 'POST', body: formData });
+    // CORRECCIÓN: Apuntamos al endpoint raíz unificado configurado en index.js
+    const res  = await fetch('/importar', { method: 'POST', body: formData });
     const data = await res.json();
 
     if (data.success) {
       importResult.className   = 'ok';
       importResult.textContent = data.message;
-      fetchDelitos(currentPage);
+      fetchDelitos(1); // Recarga la tabla en la página 1 para ver lo nuevo
     } else {
       importResult.className   = 'err';
-      importResult.textContent = data.error + (data.details ? `\n${data.details}` : '');
+      importResult.textContent = `Error: ${data.error}` + (data.details ? `\n${data.details}` : '');
     }
   } catch (err) {
     importResult.className   = 'err';
     importResult.textContent = `Error de red: ${err.message}`;
   } finally {
     importResult.style.display = 'block';
-    btnImportar.disabled       = false;
     btnImportar.textContent    = 'Importar';
     showLoader(false);
     selectedFile              = null;
@@ -296,6 +317,7 @@ btnImportar.addEventListener('click', async () => {
    INIT
 ═══════════════════════════════════════════════════════════════ */
 (async () => {
+  initTheme();
   await cargarTipos();
   fetchDelitos(1);
 })();

@@ -6,17 +6,26 @@
     <title>Backoffice — Delitos</title>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="backoffice.css">
+    <link rel="stylesheet" href="/backoffice/backoffice.css">
+    <script>
+      // Evita el parpadeo blanco al cargar la página en modo oscuro
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
   </head>
   <body>
     <header>
       <div class="logo"><img src="../img/imagotipo_color.png" alt="Logo Safeli"></div>
+      <div class="header-actions">
+        <button class="theme-toggle-btn" id="theme-toggle">
+          <span id="theme-icon">🌙</span> <span id="theme-text">Modo Oscuro</span>
+        </button>
+      </div>
     </header>
     
     <div id="loader"><div class="spinner"></div></div>
     <div class="layout">
 
-      <!-- ─── SIDEBAR ─── -->
       <aside>
         <div class="filter-section-title">Filtros</div>
         <div class="filter-group">
@@ -65,7 +74,6 @@
           <button class="btn btn-ghost"   id="btn-limpiar">Limpiar</button>
         </div>
 
-        <!-- Importar -->
         <div class="import-box">
           <div class="filter-section-title">Importar datos</div>
           <div class="file-drop" id="file-drop">
@@ -79,7 +87,6 @@
         </div>
       </aside>
 
-      <!-- ─── MAIN ─── -->
       <main>
         <div class="toolbar">
           <div class="toolbar-left">
@@ -113,7 +120,7 @@
           <table>
             <thead>
               <tr>
-                <th data-col="id"        class="active">ID <span class="sort-icon">↑</span></th>
+                <th data-col="id" class="active">ID <span class="sort-icon">↑</span></th>
                 <th>Ubicación</th>
                 <th data-col="fecha">Fecha <span class="sort-icon">↕</span></th>
                 <th data-col="gravedad">Gravedad <span class="sort-icon">↕</span></th>
@@ -123,8 +130,7 @@
               </tr>
             </thead>
             <tbody id="table-body">
-              <!-- rows injected by JS -->
-            </tbody>
+              </tbody>
           </table>
           <div class="empty-state" id="empty-state" style="display:none">
             <div class="empty-icon">🔍</div>
@@ -135,6 +141,6 @@
         <div class="pagination" id="pagination"></div>
       </main>
     </div>
-    <script src="backoffice.client.js"></script>
+    <script src="/backoffice/backoffice.client.js"></script>
   </body>
 </html>

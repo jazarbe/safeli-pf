@@ -4,34 +4,29 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const DBRouter = require('./src/controllers/db-controller.js');
+const { importarDelitos } = require('./src/backoffice/backoffice.js');
+const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-const { importarDelitos } = require('./src/backoffice/backoffice.js');
-const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Middleware para parsear JSON y formularios
 app.use(express.json());
 
-// Servir archivos estáticos (CSS, JS del cliente, imágenes) desde la carpeta 'src'
+// Servir archivos estáticos desde la carpeta 'src'
 app.use(express.static(path.join(__dirname, 'src')));
 
 // --- RUTAS DE LA API (SUPABASE) ---
-// Conectamos tu controlador para que responda bajo el prefijo /api o /delitos
 app.use('/delitos', DBRouter); 
 
-// --- RUTAS DE LAS VISTAS (HTML) ---
+// --- RUTA PRINCIPAL (BACKOFFICE INTEGRADO) ---
+// Ahora la raíz redirige o sirve directamente el panel avanzado
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'src', 'index.html'));
-});
-
-app.get('/backoffice', (req, res) => {
   res.sendFile(path.join(__dirname, 'src', 'backoffice', 'backoffice.html'));
 });
 
-// Mantenemos tu endpoint global de importación por si el formulario del HTML apunta directo a la raíz
+// Endpoint unificado de importación en la raíz de la API
 app.post('/importar', upload.single('archivo'), async (req, res) => {
   try {
     if (!req.file) {
@@ -52,6 +47,5 @@ app.post('/importar', upload.single('archivo'), async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-  console.log(`📊 Panel de control disponible en: http://localhost:${PORT}/backoffice`);
+  console.log(`📊 Panel de control unificado en: http://localhost:${PORT}`);
 });
